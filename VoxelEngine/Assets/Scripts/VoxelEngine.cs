@@ -5,10 +5,11 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Threading;
 
-public class VoxelEngine : Singleton<VoxelEngine> {
+public class VoxelEngine : Singleton<VoxelEngine>
+{
 
     [SerializeField]
-    Text infoText;    
+    Text infoText;
     [SerializeField]
     int chunkWidth;
     [SerializeField]
@@ -120,7 +121,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
         public GameObject meshObject;
         public Vector3[] vertices;
         public Vector2[] uvs;
-        public int[] triangles; 
+        public int[] triangles;
     }
 
     public struct Chunk
@@ -153,7 +154,8 @@ public class VoxelEngine : Singleton<VoxelEngine> {
     public enum FaceDir { y_positiv, y_negativ, x_positiv, x_negativ, z_positiv, z_negativ };
 
     // Use this for initialization
-    void Start () {
+    void Start()
+    {
         // Initialize queues, lists, and dictionaries
         initializingChunksQueue = new List<Coords>();
         meshUpdateQueue = new List<Coords>();
@@ -161,19 +163,103 @@ public class VoxelEngine : Singleton<VoxelEngine> {
         chunks = new Dictionary<Coords, Chunk>();
         loadingChunksQueue = new List<Coords>();
         unloadingChunksQueue = new List<Coords>();
-       
-    }
-	
-	// Update is called once per frame
-	void Update () {
 
-        if(Time.time - timeAtLastUpdate > updateRate)
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+        if (Time.time - timeAtLastUpdate > updateRate)
         {
             UpdateQueues();
             UpdateChunkMeshes();
             UpdateUnloadChunks();
 
             timeAtLastUpdate = Time.time;
+        }
+
+        if (Input.GetKeyDown("r"))
+        {
+            foreach (var chunk in loadedChunks)
+            {
+                var coords = new Coords(chunk.x, chunk.y, chunk.z);
+                if (!unloadingChunksQueue.Contains(coords))
+                    unloadingChunksQueue.Add(coords);
+            }
+            loadedChunks.Clear();
+        }
+
+        if (Input.GetKeyDown("g"))
+        {
+            Ray ray = new Ray(playerPos, Camera.main.transform.forward);
+            RaycastHit hit;
+            if(Physics.Raycast(ray, out hit))
+            {
+
+                var chunkCoords = GetAllChunkCoordsInCircle(hit.point, 3.0f);
+                Debug.Log("Found " + chunkCoords.Length + " chunkCoords");
+                foreach (var chunkCoord in chunkCoords)
+                {
+                    //Debug.Log(chunkCoord.x + " " + chunkCoord.y + " " + chunkCoord.z + " sub: " + chunkCoord.subX + " " + chunkCoord.subY + " " + chunkCoord.subZ);
+                    var chunk = chunks[new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z)];
+                    var subChunk = chunk.subChunks[chunkCoord.subX, chunkCoord.subY, chunkCoord.subZ];
+                    for (int i = 0; i < subChunkWidth; i++)
+                    {
+                        for (int j = 0; j < subChunkHeight; j++)
+                        {
+                            for (int w = 0; w < subChunkDepth; w++)
+                            {
+                                if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) < 3f)
+                                {
+                                    subChunk.voxels[i, j, w].isoValue = 1f;
+                                }
+                            }
+                        }
+                    }
+                    if (loadedChunks.Contains(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z)))
+                        loadedChunks.Remove(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z));
+                    //if(!loadingChunksQueue.Contains(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z)))
+                    //  loadingChunksQueue.Add(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z));
+                }
+            }
+
+        }
+        if (Input.GetKeyDown("f"))
+        {
+            Ray ray = new Ray(playerPos, Camera.main.transform.forward);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit))
+            {
+
+                var chunkCoords = GetAllChunkCoordsInCircle(hit.point, 1.0f);
+                Debug.Log("Found " + chunkCoords.Length + " chunkCoords");
+                foreach (var chunkCoord in chunkCoords)
+                {
+                    //Debug.Log(chunkCoord.x + " " + chunkCoord.y + " " + chunkCoord.z + " sub: " + chunkCoord.subX + " " + chunkCoord.subY + " " + chunkCoord.subZ);
+                    var chunk = chunks[new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z)];
+                    var subChunk = chunk.subChunks[chunkCoord.subX, chunkCoord.subY, chunkCoord.subZ];
+                    for (int i = 0; i < subChunkWidth; i++)
+                    {
+                        for (int j = 0; j < subChunkHeight; j++)
+                        {
+                            for (int w = 0; w < subChunkDepth; w++)
+                            {
+                                if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) < 1f)
+                                {
+                                    subChunk.voxels[i, j, w].isoValue = -1f;
+                                }
+                            }
+                        }
+                    }
+                    if (loadedChunks.Contains(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z)))
+                        loadedChunks.Remove(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z));
+                    //if(!loadingChunksQueue.Contains(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z)))
+                    //  loadingChunksQueue.Add(new Coords(chunkCoord.x, chunkCoord.y, chunkCoord.z));
+                }
+            }
+
         }
     }
 
@@ -225,7 +311,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
 
     void UpdateUnloadChunks()
     {
-        if(unloadingChunksQueue.Count > 0)
+        if (unloadingChunksQueue.Count > 0)
         {
             var coords = unloadingChunksQueue[0];
             var chunk = chunks[coords];
@@ -266,7 +352,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
     void InitializeChunk(Coords coords)
     {
         SubChunk[,,] subChunks = new SubChunk[subChunkWidth, subChunkHeight, subChunkDepth];
-        
+
         for (int i = 0; i < subChunkWidth; i++)
         {
             for (int j = 0; j < subChunkHeight; j++)
@@ -281,7 +367,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
                             for (int w2 = 0; w2 < subChunkDepth; w2++)
                             {
                                 var worldPos = VoxelCoords2WorldPos(new ChunkCoords(coords.x, coords.y, coords.z, i, j, w), i2, j2, w2);
-                                voxels[i2, j2, w2] = new Voxel(i2, j2, w2, CalculateIsoValue(worldPos), new Vector3(i2, j2, w2));
+                                voxels[i2, j2, w2] = new Voxel(i2, j2, w2, CalculateIsoValue(worldPos), new Vector3((coords.x * chunkWidth) + (i * subChunkWidth) + (i2 * voxelSpacing), (coords.y * chunkHeight) + (j * subChunkHeight) + (j2 * voxelSpacing), (coords.z * chunkDepth) + (w * subChunkDepth) + (w2 * voxelSpacing)));
                             }
                         }
                     }
@@ -317,7 +403,68 @@ public class VoxelEngine : Singleton<VoxelEngine> {
             }
         }
     }
-    
+
+    ChunkCoords[] GetAllChunkCoordsInCircle(Vector3 pos, float radius)
+    {
+        var chunkCoords = GetChunkCoords(pos);
+
+        var r = (int)((radius / voxelSpacing) / subChunkWidth) + 3;
+        var outCoords = new List<ChunkCoords>();
+        outCoords.Add(chunkCoords);
+        for (int i = -r; i <= r; i++)
+        {
+            for (int j = -r; j <= r; j++)
+            {
+                for (int w = -r; w <= r; w++)
+                {
+                    var cCoords = new Coords(chunkCoords.x, chunkCoords.y, chunkCoords.z);
+                    var x = chunkCoords.subX + i;
+                    while (x < 0)
+                    {
+                        x += subChunkWidth;
+                        cCoords.x -= 1;
+                    }
+                    while (x >= subChunkWidth)
+                    {
+                        x -= subChunkWidth;
+                        cCoords.x += 1;
+                    }
+                    var y = chunkCoords.subY + j;
+                    while (y < 0)
+                    {
+                        y += subChunkHeight;
+                        cCoords.y -= 1;
+                    }
+                    while (y >= subChunkHeight)
+                    {
+                        y -= subChunkHeight;
+                        cCoords.y += 1;
+                    }
+                    var z = chunkCoords.subZ + w;
+                    while (z < 0)
+                    {
+                        z += subChunkDepth;
+                        cCoords.z -= 1;
+                    }
+                    while (z >= subChunkDepth)
+                    {
+                        z -= subChunkDepth;
+                        cCoords.z += 1;
+                    }
+
+                    if (chunks.ContainsKey(cCoords))
+                    {
+                        var chunk = chunks[cCoords];
+                        var outCoord = new ChunkCoords(cCoords.x, cCoords.y, cCoords.z, x, y, z);
+                        if(!outCoords.Contains(outCoord))
+                            outCoords.Add(outCoord);
+                    }
+                }
+            }
+        }
+        return outCoords.ToArray();
+    }
+
     Coords[] GetCloseChunks()
     {
         var currentChunkCoords = GetChunkCoords(playerPos);
@@ -347,7 +494,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
             {
                 for (int w = 0; w < subChunkDepth; w++)
                 {
-                    if(chunk.subChunks[i, j, w].meshObject != null)
+                    if (chunk.subChunks[i, j, w].meshObject != null)
                         Destroy(chunk.subChunks[i, j, w].meshObject);
                 }
             }
@@ -402,7 +549,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
                         }
                         if (positivX != null && positivX.Value.isoValue < 0f)
                         {
-                            CreateFace(FaceDir.x_positiv, subChunk.voxels[i, j, w].center, vertices, uvs, triangles);
+                            CreateFace(FaceDir.x_positiv, new Vector3(i,j,w), vertices, uvs, triangles);
                         }
 
                         Voxel? negativX = null;
@@ -416,7 +563,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
                         }
                         if (negativX != null && negativX.Value.isoValue < 0f)
                         {
-                            CreateFace(FaceDir.x_negativ, subChunk.voxels[i, j, w].center, vertices, uvs, triangles);
+                            CreateFace(FaceDir.x_negativ, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
                         Voxel? positivY = null;
                         if (j + 1 >= subChunkHeight)
@@ -429,7 +576,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
                         }
                         if (positivY != null && positivY.Value.isoValue < 0f)
                         {
-                            CreateFace(FaceDir.y_positiv, subChunk.voxels[i, j, w].center, vertices, uvs, triangles);
+                            CreateFace(FaceDir.y_positiv, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
                         Voxel? negativY = null;
                         if (j - 1 < 0)
@@ -442,7 +589,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
                         }
                         if (negativY != null && negativY.Value.isoValue < 0f)
                         {
-                            CreateFace(FaceDir.y_negativ, subChunk.voxels[i, j, w].center, vertices, uvs, triangles);
+                            CreateFace(FaceDir.y_negativ, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
                         Voxel? positivZ = null;
                         if (w + 1 >= subChunkDepth)
@@ -455,7 +602,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
                         }
                         if (positivZ != null && positivZ.Value.isoValue < 0f)
                         {
-                            CreateFace(FaceDir.z_positiv, subChunk.voxels[i, j, w].center, vertices, uvs, triangles);
+                            CreateFace(FaceDir.z_positiv, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
                         Voxel? negativZ = null;
                         if (w - 1 < 0)
@@ -468,24 +615,24 @@ public class VoxelEngine : Singleton<VoxelEngine> {
                         }
                         if (negativZ != null && negativZ.Value.isoValue < 0f)
                         {
-                            CreateFace(FaceDir.z_negativ, subChunk.voxels[i, j, w].center, vertices, uvs, triangles);
+                            CreateFace(FaceDir.z_negativ, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
                     }
                 }
             }
         }
-        if(vertices.Count > 0)
+        if (vertices.Count > 0)
         {
             subChunk.vertices = vertices.ToArray();
             subChunk.uvs = uvs.ToArray();
             subChunk.triangles = triangles.ToArray();
         }
     }
-    
+
     void UpdateSubChunk(ref SubChunk subChunk, int chunkX, int chunkY, int chunkZ)
     {
         
-        if(subChunk.vertices != null && subChunk.vertices.Length > 0)
+        if (subChunk.vertices != null && subChunk.vertices.Length > 0)
         {
             if (subChunk.meshObject == null)
             {
@@ -507,6 +654,9 @@ public class VoxelEngine : Singleton<VoxelEngine> {
 
             subChunk.meshObject.GetComponent<MeshFilter>().mesh = mesh;
             subChunk.meshObject.GetComponent<MeshCollider>().sharedMesh = mesh;
+        } else if(subChunk.meshObject != null)
+        {
+            Destroy(subChunk.meshObject);
         }
     }
 
@@ -612,7 +762,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
             subZ = subChunkDepth - 1;
         }
         #endregion
-        
+
         var c = new Coords(chunkX, chunkY, chunkZ);
         if (!chunks.ContainsKey(c))
         {
@@ -625,8 +775,8 @@ public class VoxelEngine : Singleton<VoxelEngine> {
     Coords GetVoxelWorldCoords(ChunkCoords chunkCoords, Coords localVoxelCoords)
     {
 
-        var worldX = Mathf.FloorToInt(( chunkCoords.x * chunkWidth ) + 
-            ( chunkCoords.subX * subChunkWidth ) + 
+        var worldX = Mathf.FloorToInt((chunkCoords.x * chunkWidth) +
+            (chunkCoords.subX * subChunkWidth) +
             (localVoxelCoords.x));
         var worldY = Mathf.FloorToInt((chunkCoords.y * chunkHeight) +
             (chunkCoords.subY * subChunkHeight) +
@@ -662,7 +812,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
         Coords voxelLocal;
         ChunkCoords chunkCoords = VoxelWorldCoords2ChunkCoords(voxelWorldCoords, out voxelLocal);
         Coords coords = new Coords(chunkCoords.x, chunkCoords.y, chunkCoords.z);
-        if ( !chunks.ContainsKey( coords ))
+        if (!chunks.ContainsKey(coords))
         {
             return 0;
         }
@@ -676,13 +826,13 @@ public class VoxelEngine : Singleton<VoxelEngine> {
         var coords = new Coords(chunkCoords.x, chunkCoords.y, chunkCoords.z);
         if (!chunks.ContainsKey(coords))
         {
-            return new Voxel(0,0,0,0,Vector3.zero);
+            return new Voxel(0, 0, 0, 0, Vector3.zero);
         }
 
         return chunks[coords].subChunks[chunkCoords.subX, chunkCoords.subY, chunkCoords.subZ].voxels[x, y, z];
 
     }
-    
+
     float GetIsoValue(ChunkCoords chunkCoords, int x, int y, int z)
     {
         var coords = new Coords(chunkCoords.x, chunkCoords.y, chunkCoords.z);
@@ -718,7 +868,7 @@ public class VoxelEngine : Singleton<VoxelEngine> {
 
     void CreateFace(FaceDir dir, Vector3 center, List<Vector3> vertices, List<Vector2> uvs, List<int> triangles)
     {
-        
+
         int triOffset = triangles.Count;
         switch (dir)
         {
