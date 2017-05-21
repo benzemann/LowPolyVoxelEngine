@@ -164,13 +164,19 @@ public class VoxelEngine : Singleton<VoxelEngine>
         loadingChunksQueue = new List<Coords>();
         unloadingChunksQueue = new List<Coords>();
 
+        var closeChunks = GetCloseChunks(playerPos, 10, 2);
+        foreach(var chunk in closeChunks)
+        {
+            initializingChunksQueue.Add(chunk);
+            InitializeChunk(chunk);
+        }
 
     }
 
     // Update is called once per frame
     void Update()
     {
-
+        //Debug.Log(CalculateIsoValue(playerPos));
         if (Time.time - timeAtLastUpdate > updateRate)
         {
             UpdateQueues();
@@ -220,6 +226,8 @@ public class VoxelEngine : Singleton<VoxelEngine>
                                 if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) < 3f)
                                 {
                                     subChunk.voxels[i, j, w].isoValue += 0.5f;
+                                    if (subChunk.voxels[i, j, w].isoValue > 5f)
+                                        subChunk.voxels[i, j, w].isoValue = 5f;
                                 }
                             }
                         }
@@ -255,6 +263,8 @@ public class VoxelEngine : Singleton<VoxelEngine>
                                 if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) <= 1f)
                                 {
                                     subChunk.voxels[i, j, w].isoValue -= 0.5f;
+                                    if (subChunk.voxels[i, j, w].isoValue < -5f)
+                                        subChunk.voxels[i, j, w].isoValue = -5f;
                                 }
                             }
                         }
@@ -276,8 +286,10 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
     void UpdateQueues()
     {
+        if (loadingChunksQueue.Count > 5 || meshUpdateQueue.Count > 5 || unloadingChunksQueue.Count > 5 || initializingChunksQueue.Count > 5)
+            return;
         // Update loading and initalizing queue
-        var closeChunks = GetCloseChunks();
+        var closeChunks = GetCloseChunks(playerPos);
         lock (initLock)
         {
             for (int i = 0; i < closeChunks.Length; i++)
@@ -471,15 +483,19 @@ public class VoxelEngine : Singleton<VoxelEngine>
         return outCoords.ToArray();
     }
 
-    Coords[] GetCloseChunks()
+    Coords[] GetCloseChunks(Vector3 pos, int radXZ = 0, int radY = 0)
     {
-        var currentChunkCoords = GetChunkCoords(playerPos);
+        var currentChunkCoords = GetChunkCoords(pos);
         var result = new List<Coords>();
-        for (int i = -loadRadiusXZ; i <= loadRadiusXZ; i++)
+        if (radXZ == 0)
+            radXZ = loadRadiusXZ;
+        if (radY == 0)
+            radY = loadRadiusY;
+        for (int i = -radXZ; i <= radXZ; i++)
         {
-            for (int j = -loadRadiusY; j <= loadRadiusY; j++)
+            for (int j = -radY; j <= radY; j++)
             {
-                for (int w = -loadRadiusXZ; w <= loadRadiusXZ; w++)
+                for (int w = -radXZ; w <= radXZ; w++)
                 {
                     var coords = new Coords(currentChunkCoords.x + i,
                                             currentChunkCoords.y + j,
@@ -629,7 +645,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         }
         if (vertices.Count > 0)
         {
-            PushToSurface(vertices, new Vector3((chunkX * chunkWidth) + (subChunk.x * subChunkWidth), (chunkY * chunkHeight) + (subChunk.y * subChunkHeight),(chunkZ * chunkDepth) + (subChunk.z * subChunkDepth)));
+           // PushToSurface(vertices, new Vector3((chunkX * chunkWidth) + (subChunk.x * subChunkWidth), (chunkY * chunkHeight) + (subChunk.y * subChunkHeight),(chunkZ * chunkDepth) + (subChunk.z * subChunkDepth)));
             subChunk.vertices = vertices.ToArray();
             subChunk.uvs = uvs.ToArray();
             subChunk.triangles = triangles.ToArray();
@@ -644,18 +660,25 @@ public class VoxelEngine : Singleton<VoxelEngine>
                     (GetIsoValue((pos + new Vector3(0.0f, 0.0f, 0.5f))) - GetIsoValue((pos - new Vector3(0.0f, 0.0f, 0.5f)))) / 2f
                     );
     }
+
+    Vector3 PushToSurface(Vector3 vertex, Vector3 pos)
+    {
+        var gradient = GetGradient(pos + vertex) * 2f;
+        // Debug.Log(gradient);
+        if (gradient.magnitude > 0.01f)
+            vertex += -gradient * (GetIsoValue(pos + vertex)) / (gradient.magnitude * gradient.magnitude);
+
+        return vertex;
+    }
     
     void PushToSurface(List<Vector3> vertices, Vector3 pos)
     {
-        for (int it = 0; it < 2; it++)
+        for (int it = 0; it < 1; it++)
         {
             for (int i = 0; i < vertices.Count; i++)
             {
-                var gradient = GetGradient(pos + vertices[i]);
-              //  Debug.Log(gradient);
-                if (gradient.magnitude > 0f)
-                    vertices[i] += -gradient * (GetIsoValue(vertices[i])) / (gradient.magnitude * gradient.magnitude);
-                    
+
+                vertices[i] = PushToSurface(vertices[i], pos);
             }
         }
     }
@@ -711,8 +734,14 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
     float CalculateIsoValue(Vector3 pos)
     {
-        var value = Noise.Perlin3D(pos, 0.08f);
-        return pos.y;
+        var value = (Noise.Perlin2D(new Vector2(pos.x,pos.z), 0.1f) * 5f);
+        value = pos.y - value;
+        if (value > 5f)
+            value = 5f;
+        if (value < -5f)
+            value = -5f;
+            
+        return value;
     }
 
     Voxel? GetNeighborVoxel(ChunkCoords chunkCoords, Coords voxelCoords, int nX, int nY, int nZ)
@@ -869,7 +898,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         var coords = new Coords(chunkCoords.x, chunkCoords.y, chunkCoords.z);
         if (!chunks.ContainsKey(coords))
         {
-            return -1f;
+            return 1f;
         }
 
         var chunk = chunks[coords];

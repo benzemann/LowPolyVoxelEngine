@@ -4,8 +4,13 @@ using UnityEngine;
 
 public class Player : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
+    private void Awake()
+    {
+        VoxelEngine.Instance.playerPos = this.transform.position;
+    }
+
+    // Use this for initialization
+    void Start () {
 		
 	}
 	
