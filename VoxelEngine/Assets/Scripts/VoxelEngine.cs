@@ -191,6 +191,12 @@ public class VoxelEngine : Singleton<VoxelEngine>
             loadedChunks.Clear();
         }
 
+        if (Input.GetKeyDown("i"))
+        {
+            var tmp = GetIsoValue(playerPos);
+            Debug.Log(tmp);
+        }
+        //Debug.Log("grad: " + GetGradient(playerPos));
         if (Input.GetKeyDown("g"))
         {
             Ray ray = new Ray(playerPos, Camera.main.transform.forward);
@@ -213,7 +219,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
                             {
                                 if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) < 3f)
                                 {
-                                    subChunk.voxels[i, j, w].isoValue = 1f;
+                                    subChunk.voxels[i, j, w].isoValue += 0.5f;
                                 }
                             }
                         }
@@ -246,9 +252,9 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             for (int w = 0; w < subChunkDepth; w++)
                             {
-                                if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) < 1f)
+                                if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) <= 1f)
                                 {
-                                    subChunk.voxels[i, j, w].isoValue = -1f;
+                                    subChunk.voxels[i, j, w].isoValue -= 0.5f;
                                 }
                             }
                         }
@@ -408,7 +414,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
     {
         var chunkCoords = GetChunkCoords(pos);
 
-        var r = (int)((radius / voxelSpacing) / subChunkWidth) + 3;
+        var r = Mathf.Max((int)((radius / voxelSpacing) / subChunkWidth),1);
         var outCoords = new List<ChunkCoords>();
         outCoords.Add(chunkCoords);
         for (int i = -r; i <= r; i++)
@@ -623,9 +629,34 @@ public class VoxelEngine : Singleton<VoxelEngine>
         }
         if (vertices.Count > 0)
         {
+            PushToSurface(vertices, new Vector3((chunkX * chunkWidth) + (subChunk.x * subChunkWidth), (chunkY * chunkHeight) + (subChunk.y * subChunkHeight),(chunkZ * chunkDepth) + (subChunk.z * subChunkDepth)));
             subChunk.vertices = vertices.ToArray();
             subChunk.uvs = uvs.ToArray();
             subChunk.triangles = triangles.ToArray();
+        }
+    }
+
+    public Vector3 GetGradient(Vector3 pos)
+    {
+        return new Vector3(
+                    (GetIsoValue((pos + new Vector3(0.5f, 0.0f, 0.0f))) - GetIsoValue((pos - new Vector3(0.5f, 0.0f, 0.0f)))) / 2f,
+                    (GetIsoValue((pos + new Vector3(0.0f, 0.5f, 0.0f))) - GetIsoValue((pos - new Vector3(0.0f, 0.5f, 0.0f)))) / 2f,
+                    (GetIsoValue((pos + new Vector3(0.0f, 0.0f, 0.5f))) - GetIsoValue((pos - new Vector3(0.0f, 0.0f, 0.5f)))) / 2f
+                    );
+    }
+    
+    void PushToSurface(List<Vector3> vertices, Vector3 pos)
+    {
+        for (int it = 0; it < 2; it++)
+        {
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                var gradient = GetGradient(pos + vertices[i]);
+              //  Debug.Log(gradient);
+                if (gradient.magnitude > 0f)
+                    vertices[i] += -gradient * (GetIsoValue(vertices[i])) / (gradient.magnitude * gradient.magnitude);
+                    
+            }
         }
     }
 
@@ -847,6 +878,70 @@ public class VoxelEngine : Singleton<VoxelEngine>
         return subChunk.voxels[x, y, z].isoValue;
     }
 
+    float GetIsoValue(Vector3 pos)
+    {
+        int vX, vY, vZ;
+        var chunkCoords = GetChunkCoords(pos, out vX, out vY, out vZ);
+
+        int vX_100, vY_100, vZ_100;
+        ChunkCoords chunkCoords_100;
+        if(vX + 1 >= subChunkWidth)
+        {
+            chunkCoords_100 = GetChunkCoords(new Vector3(pos.x + voxelSpacing, pos.y, pos.z), out vX_100, out vY_100, out vZ_100);
+        } else
+        {
+            chunkCoords_100 = chunkCoords;
+            vX_100 = vX + 1;
+            vY_100 = vY;
+            vZ_100 = vZ;
+        }
+
+        int vX_110, vY_110, vZ_110;
+        var chunkCoords_110 = GetChunkCoords(new Vector3(pos.x + voxelSpacing, pos.y + voxelSpacing, pos.z), out vX_110, out vY_110, out vZ_110);
+
+        int vX_010, vY_010, vZ_010;
+        var chunkCoords_010 = GetChunkCoords(new Vector3(pos.x, pos.y + voxelSpacing, pos.z), out vX_010, out vY_010, out vZ_010);
+        
+        int vX_001, vY_001, vZ_001;
+        var chunkCoords_001 = GetChunkCoords(new Vector3(pos.x, pos.y, pos.z + voxelSpacing), out vX_001, out vY_001, out vZ_001);
+
+        int vX_101, vY_101, vZ_101;
+        var chunkCoords_101 = GetChunkCoords(new Vector3(pos.x + voxelSpacing, pos.y, pos.z + voxelSpacing), out vX_101, out vY_101, out vZ_101);
+
+        int vX_011, vY_011, vZ_011;
+        var chunkCoords_011 = GetChunkCoords(new Vector3(pos.x, pos.y + voxelSpacing, pos.z + voxelSpacing), out vX_011, out vY_011, out vZ_011);
+
+        int vX_111, vY_111, vZ_111;
+        var chunkCoords_111 = GetChunkCoords(new Vector3(pos.x + voxelSpacing, pos.y + voxelSpacing, pos.z + voxelSpacing), out vX_111, out vY_111, out vZ_111);
+
+        var coords = new Coords(chunkCoords.x, chunkCoords.y, chunkCoords.z);
+        var coords_100 = new Coords(chunkCoords_100.x, chunkCoords_100.y, chunkCoords_100.z);
+        var coords_110 = new Coords(chunkCoords_110.x, chunkCoords_110.y, chunkCoords_110.z);
+        var coords_010 = new Coords(chunkCoords_010.x, chunkCoords_010.y, chunkCoords_010.z);
+        var coords_001 = new Coords(chunkCoords_001.x, chunkCoords_001.y, chunkCoords_001.z);
+        var coords_101 = new Coords(chunkCoords_001.x, chunkCoords_001.y, chunkCoords_001.z);
+        var coords_011 = new Coords(chunkCoords_011.x, chunkCoords_011.y, chunkCoords_011.z);
+        var coords_111 = new Coords(chunkCoords_111.x, chunkCoords_111.y, chunkCoords_111.z);
+
+        var tx = (pos.x - ((vX * voxelSpacing) + (chunkCoords.x * chunkWidth) + (chunkCoords.subX * subChunkWidth))) / voxelSpacing;
+        var val_000_100 = ((1 - tx) * GetIsoValue(chunkCoords, vX, vY, vZ)) + (tx * GetIsoValue(chunkCoords_100, vX_100, vY_100, vZ_100));
+
+        var val_010_110 = ((1 - tx) * GetIsoValue(chunkCoords_010, vX_010, vY_010, vZ_010)) + (tx * GetIsoValue(chunkCoords_110, vX_110, vY_110, vZ_110));
+
+        var ty = (pos.y - ((vY * voxelSpacing) + (chunkCoords.y * chunkHeight) + (chunkCoords.subY * subChunkHeight))) / voxelSpacing;
+        var val_mid_1 = ((1 - ty) * val_000_100) + (ty * val_010_110);
+
+        var val_001_101 = ((1 - tx) * GetIsoValue(chunkCoords_001, vX_001, vY_001, vZ_001)) + (tx * GetIsoValue(chunkCoords_101, vX_101, vY_101, vZ_101));
+
+        var val_011_111 = ((1 - tx) * GetIsoValue(chunkCoords_011, vX_011, vY_011, vZ_011)) + (tx * GetIsoValue(chunkCoords_111, vX_111, vY_111, vZ_111));
+
+        var val_mid_2 = ((1 - ty) * val_001_101) + (ty * val_011_111);
+
+        var tz = (pos.z - ((vZ * voxelSpacing) + (chunkCoords.z * chunkDepth) + (chunkCoords.subZ * subChunkDepth))) / voxelSpacing;
+        
+        return ((1 - tz) * val_mid_1) + (tz * val_mid_2);
+    }
+
     ChunkCoords GetChunkCoords(Vector3 pos)
     {
         var chunkCoords = new ChunkCoords();
@@ -862,6 +957,33 @@ public class VoxelEngine : Singleton<VoxelEngine>
         chunkCoords.subX = Mathf.FloorToInt((pos.x - chunkOrigin.x) / (subChunkWidth * voxelSpacing));
         chunkCoords.subY = Mathf.FloorToInt((pos.y - chunkOrigin.y) / (subChunkHeight * voxelSpacing));
         chunkCoords.subZ = Mathf.FloorToInt((pos.z - chunkOrigin.z) / (subChunkDepth * voxelSpacing));
+
+        return chunkCoords;
+    }
+
+    ChunkCoords GetChunkCoords(Vector3 pos, out int vX, out int vY, out int vZ)
+    {
+        var chunkCoords = new ChunkCoords();
+
+        chunkCoords.x = Mathf.FloorToInt(pos.x / (chunkWidth * voxelSpacing));
+        chunkCoords.y = Mathf.FloorToInt(pos.y / (chunkHeight * voxelSpacing));
+        chunkCoords.z = Mathf.FloorToInt(pos.z / (chunkDepth * voxelSpacing));
+
+        var chunkOrigin = new Vector3(chunkWidth * voxelSpacing * chunkCoords.x,
+                                        chunkHeight * voxelSpacing * chunkCoords.y,
+                                        chunkDepth * voxelSpacing * chunkCoords.z);
+
+        chunkCoords.subX = Mathf.FloorToInt((pos.x - chunkOrigin.x) / (subChunkWidth * voxelSpacing));
+        chunkCoords.subY = Mathf.FloorToInt((pos.y - chunkOrigin.y) / (subChunkHeight * voxelSpacing));
+        chunkCoords.subZ = Mathf.FloorToInt((pos.z - chunkOrigin.z) / (subChunkDepth * voxelSpacing));
+
+        var subChunkOrigin = new Vector3(subChunkWidth * voxelSpacing * chunkCoords.subX,
+                                        subChunkHeight * voxelSpacing * chunkCoords.subY,
+                                        subChunkDepth * voxelSpacing * chunkCoords.subZ);
+
+        vX = Mathf.FloorToInt((pos.x - chunkOrigin.x - subChunkOrigin.x) / (voxelSpacing));
+        vY = Mathf.FloorToInt((pos.y - chunkOrigin.y - subChunkOrigin.y) / (voxelSpacing));
+        vZ = Mathf.FloorToInt((pos.z - chunkOrigin.z - subChunkOrigin.z) / (voxelSpacing));
 
         return chunkCoords;
     }
