@@ -4,6 +4,9 @@ using System.Collections.Concurrent;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Threading;
+using System;
+using diagnostic = System.Diagnostics;
+using System.Linq;
 
 public class VoxelEngine : Singleton<VoxelEngine>
 {
@@ -52,7 +55,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
     public Vector3 playerPos;
 
-    public struct Coords
+    public struct Coords : IEquatable<Coords>
     {
         public Coords(int _x, int _y, int _z)
         {
@@ -63,6 +66,34 @@ public class VoxelEngine : Singleton<VoxelEngine>
         public int x;
         public int y;
         public int z;
+
+        public override int GetHashCode()
+        {
+            return x.GetHashCode() ^ y.GetHashCode() << 2 ^ z.GetHashCode() >> 2;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null || !(obj is Coords))
+                return false;
+
+            return Equals((Coords)obj);
+        }
+
+        public bool Equals(Coords other)
+        {
+            return (x == other.x && y == other.y && z == other.z);
+        }
+
+        public static bool operator ==(Coords c1, Coords c2)
+        {
+            return c1.Equals(c2);
+        }
+
+        public static bool operator !=(Coords c1, Coords c2)
+        {
+            return !(c1 == c2);
+        }
     }
 
     public struct ChunkCoords
@@ -164,13 +195,24 @@ public class VoxelEngine : Singleton<VoxelEngine>
         loadingChunksQueue = new List<Coords>();
         unloadingChunksQueue = new List<Coords>();
 
-        var closeChunks = GetCloseChunks(playerPos, 10, 2);
+        /*var closeChunks = GetCloseChunks(playerPos, 10, 2);
         foreach(var chunk in closeChunks)
         {
             initializingChunksQueue.Add(chunk);
             InitializeChunk(chunk);
         }
-
+        */
+        var sw = new diagnostic.Stopwatch();
+        sw.Start();
+        for(int i = 0; i < 10000; i++)
+            GetIsoValue(playerPos);
+        sw.Stop();
+        Debug.Log("Calculate IsoValue time: " + sw.Elapsed);
+        sw.Reset();
+        sw.Start();
+        GetChunkCoords(playerPos);
+        sw.Stop();
+        Debug.Log("Calculate chunkCoords: " + sw.Elapsed);
     }
 
     // Update is called once per frame
@@ -301,12 +343,14 @@ public class VoxelEngine : Singleton<VoxelEngine>
                     if (chunks.ContainsKey(closeChunks[i]))
                     {
                         // Add it to the loading queue
-                        loadingChunksQueue.Add(closeChunks[i]);
                         var chunk = chunks[closeChunks[i]];
-                        ThreadPool.QueueUserWorkItem(work =>
-                        {
+                        loadingChunksQueue.Add(closeChunks[i]);
+                        var thread = new Thread(w => {
                             CalculateVertexDataChunk(chunk);
                         });
+                        thread.IsBackground = false;
+                        thread.Start();
+                        
                         return;
                     }
                     else
@@ -314,10 +358,10 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         // Not initialized chunk, add it to the initialization queue
                         initializingChunksQueue.Add(closeChunks[i]);
                         var coords = new Coords(closeChunks[i].x, closeChunks[i].y, closeChunks[i].z);
-                        ThreadPool.QueueUserWorkItem(work =>
-                        {
+                        //ThreadPool.QueueUserWorkItem(work =>
+                        //{
                             InitializeChunk(coords);
-                        });
+                        //});
                         return;
                     }
                 }
@@ -340,10 +384,10 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
     void UpdateChunkMeshes()
     {
-        lock (meshUpdateLock)
+        // Update/ Create meshes for all sub meshes
+        if (meshUpdateQueue.Count > 0)
         {
-            // Update/ Create meshes for all sub meshes
-            if (meshUpdateQueue.Count > 0)
+            lock (meshUpdateLock)
             {
                 var coords = meshUpdateQueue[0];
                 if (chunks.ContainsKey(coords))
@@ -359,9 +403,9 @@ public class VoxelEngine : Singleton<VoxelEngine>
                             }
                         }
                     }
-                    loadingChunksQueue.Remove(coords);
                     loadedChunks.Add(coords);
                 }
+                loadingChunksQueue.Remove(coords);
                 meshUpdateQueue.RemoveAt(0);
             }
         }
@@ -398,10 +442,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         lock (initializingChunksQueue)
         {
             chunks.Add(coords, newChunk);
-            if (!initializingChunksQueue.Remove(coords))
-            {
-                Debug.LogError("Trying to remove a chunk from the initializing queue that is not there!");
-            }
+            initializingChunksQueue.Remove(coords);
         }
     }
 
@@ -500,11 +541,12 @@ public class VoxelEngine : Singleton<VoxelEngine>
                     var coords = new Coords(currentChunkCoords.x + i,
                                             currentChunkCoords.y + j,
                                             currentChunkCoords.z + w);
-
-                    result.Add(coords);
+                    if(!result.Contains(coords))
+                        result.Add(coords);
                 }
             }
         }
+        result = result.OrderBy(x => Vector3.Distance(new Vector3(x.x * chunkWidth * voxelSpacing, x.y * chunkHeight * voxelSpacing, x.z * chunkDepth * voxelSpacing), playerPos)).ToList();
         return result.ToArray();
     }
 
@@ -526,6 +568,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
     void CalculateVertexDataChunk(Chunk chunk)
     {
+        
         for (int i = 0; i < subChunkWidth; i++)
         {
             for (int j = 0; j < subChunkHeight; j++)
@@ -536,9 +579,19 @@ public class VoxelEngine : Singleton<VoxelEngine>
                 }
             }
         }
+        
+
         lock (meshUpdateLock)
         {
-            meshUpdateQueue.Add(new Coords(chunk.x, chunk.y, chunk.z));
+            
+
+            if (!meshUpdateQueue.Contains(new Coords(chunk.x, chunk.y, chunk.z)))
+            {
+                meshUpdateQueue.Add(new Coords(chunk.x, chunk.y, chunk.z));
+            } else
+            {
+                Debug.LogError("Trying to add an already queued update");
+            }
         }
     }
 
@@ -645,14 +698,20 @@ public class VoxelEngine : Singleton<VoxelEngine>
         }
         if (vertices.Count > 0)
         {
-           // PushToSurface(vertices, new Vector3((chunkX * chunkWidth) + (subChunk.x * subChunkWidth), (chunkY * chunkHeight) + (subChunk.y * subChunkHeight),(chunkZ * chunkDepth) + (subChunk.z * subChunkDepth)));
+            var chunkCoords = new ChunkCoords(chunkX, chunkY, chunkZ, subChunk.x, subChunk.y, subChunk.z);
+
+            PushToSurface(vertices, 
+                new Vector3((chunkX * chunkWidth) + (subChunk.x * subChunkWidth), 
+                (chunkY * chunkHeight) + (subChunk.y * subChunkHeight)
+                ,(chunkZ * chunkDepth) + (subChunk.z * subChunkDepth)),
+                chunkCoords);
             subChunk.vertices = vertices.ToArray();
             subChunk.uvs = uvs.ToArray();
             subChunk.triangles = triangles.ToArray();
         }
     }
 
-    public Vector3 GetGradient(Vector3 pos)
+    public Vector3 GetGradient(Vector3 pos, ChunkCoords chunkCoords)
     {
         return new Vector3(
                     (GetIsoValue((pos + new Vector3(0.5f, 0.0f, 0.0f))) - GetIsoValue((pos - new Vector3(0.5f, 0.0f, 0.0f)))) / 2f,
@@ -661,9 +720,9 @@ public class VoxelEngine : Singleton<VoxelEngine>
                     );
     }
 
-    Vector3 PushToSurface(Vector3 vertex, Vector3 pos)
+    Vector3 PushToSurface(Vector3 vertex, Vector3 pos, ChunkCoords chunkCoords)
     {
-        var gradient = GetGradient(pos + vertex) * 2f;
+        var gradient = GetGradient(pos + vertex, chunkCoords) * 2f;
         // Debug.Log(gradient);
         if (gradient.magnitude > 0.01f)
             vertex += -gradient * (GetIsoValue(pos + vertex)) / (gradient.magnitude * gradient.magnitude);
@@ -671,15 +730,11 @@ public class VoxelEngine : Singleton<VoxelEngine>
         return vertex;
     }
     
-    void PushToSurface(List<Vector3> vertices, Vector3 pos)
+    void PushToSurface(List<Vector3> vertices, Vector3 pos, ChunkCoords chunkCoords)
     {
-        for (int it = 0; it < 1; it++)
+        for (int i = 0; i < vertices.Count; i++)
         {
-            for (int i = 0; i < vertices.Count; i++)
-            {
-
-                vertices[i] = PushToSurface(vertices[i], pos);
-            }
+            vertices[i] = PushToSurface(vertices[i], pos, chunkCoords);
         }
     }
 
@@ -705,7 +760,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
             mesh.RecalculateBounds();
             mesh.RecalculateNormals();
-
+            
             subChunk.meshObject.GetComponent<MeshFilter>().mesh = mesh;
             subChunk.meshObject.GetComponent<MeshCollider>().sharedMesh = mesh;
         } else if(subChunk.meshObject != null)
@@ -734,8 +789,8 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
     float CalculateIsoValue(Vector3 pos)
     {
-        var value = (Noise.Perlin2D(new Vector2(pos.x,pos.z), 0.1f) * 5f);
-        value = pos.y - value;
+        var value = (Noise.Perlin2D(new Vector2(pos.x,pos.z), 0.05f) * 5f);
+        value = (pos.y - 25f)- value;
         if (value > 5f)
             value = 5f;
         if (value < -5f)
@@ -895,12 +950,17 @@ public class VoxelEngine : Singleton<VoxelEngine>
 
     float GetIsoValue(ChunkCoords chunkCoords, int x, int y, int z)
     {
+        //return 1f;
         var coords = new Coords(chunkCoords.x, chunkCoords.y, chunkCoords.z);
-        if (!chunks.ContainsKey(coords))
+        lock (initLock)
         {
-            return 1f;
+            if (!chunks.ContainsKey(coords) && !initializingChunksQueue.Contains(coords))
+        {
+            
+                InitializeChunk(coords);
+            
         }
-
+        }
         var chunk = chunks[coords];
         var subChunk = chunk.subChunks[chunkCoords.subX, chunkCoords.subY, chunkCoords.subZ];
 
@@ -913,17 +973,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         var chunkCoords = GetChunkCoords(pos, out vX, out vY, out vZ);
 
         int vX_100, vY_100, vZ_100;
-        ChunkCoords chunkCoords_100;
-        if(vX + 1 >= subChunkWidth)
-        {
-            chunkCoords_100 = GetChunkCoords(new Vector3(pos.x + voxelSpacing, pos.y, pos.z), out vX_100, out vY_100, out vZ_100);
-        } else
-        {
-            chunkCoords_100 = chunkCoords;
-            vX_100 = vX + 1;
-            vY_100 = vY;
-            vZ_100 = vZ;
-        }
+        var chunkCoords_100 = GetChunkCoords(new Vector3(pos.x + voxelSpacing, pos.y, pos.z), out vX_100, out vY_100, out vZ_100);
 
         int vX_110, vY_110, vZ_110;
         var chunkCoords_110 = GetChunkCoords(new Vector3(pos.x + voxelSpacing, pos.y + voxelSpacing, pos.z), out vX_110, out vY_110, out vZ_110);
@@ -951,7 +1001,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         var coords_101 = new Coords(chunkCoords_001.x, chunkCoords_001.y, chunkCoords_001.z);
         var coords_011 = new Coords(chunkCoords_011.x, chunkCoords_011.y, chunkCoords_011.z);
         var coords_111 = new Coords(chunkCoords_111.x, chunkCoords_111.y, chunkCoords_111.z);
-
+        
         var tx = (pos.x - ((vX * voxelSpacing) + (chunkCoords.x * chunkWidth) + (chunkCoords.subX * subChunkWidth))) / voxelSpacing;
         var val_000_100 = ((1 - tx) * GetIsoValue(chunkCoords, vX, vY, vZ)) + (tx * GetIsoValue(chunkCoords_100, vX_100, vY_100, vZ_100));
 
@@ -993,7 +1043,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
     ChunkCoords GetChunkCoords(Vector3 pos, out int vX, out int vY, out int vZ)
     {
         var chunkCoords = new ChunkCoords();
-
+        
         chunkCoords.x = Mathf.FloorToInt(pos.x / (chunkWidth * voxelSpacing));
         chunkCoords.y = Mathf.FloorToInt(pos.y / (chunkHeight * voxelSpacing));
         chunkCoords.z = Mathf.FloorToInt(pos.z / (chunkDepth * voxelSpacing));
@@ -1013,7 +1063,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         vX = Mathf.FloorToInt((pos.x - chunkOrigin.x - subChunkOrigin.x) / (voxelSpacing));
         vY = Mathf.FloorToInt((pos.y - chunkOrigin.y - subChunkOrigin.y) / (voxelSpacing));
         vZ = Mathf.FloorToInt((pos.z - chunkOrigin.z - subChunkOrigin.z) / (voxelSpacing));
-
+        
         return chunkCoords;
     }
 
