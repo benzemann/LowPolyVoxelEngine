@@ -130,12 +130,17 @@ public class VoxelEngine : Singleton<VoxelEngine>
             z = _z;
             isoValue = value;
             center = c;
+            water = 0f;
+            newWater = 0f;
         }
         public int x;
         public int y;
         public int z;
-        public float isoValue;
+        private float isoValue;
+        public float water;
+        public float newWater;
         public Vector3 center;
+        public float IsoValue { get { return isoValue + water; } set { isoValue = value; } }
     }
 
     public struct SubChunk
@@ -207,7 +212,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
             initializingChunksQueue.Add(chunk);
             InitializeChunk(chunk);
         }
-        */
+        */        
         var sw = new diagnostic.Stopwatch();
         sw.Start();
         for(int i = 0; i < 10000; i++)
@@ -224,6 +229,14 @@ public class VoxelEngine : Singleton<VoxelEngine>
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetKeyDown("q"))
+        {
+            chunks[new Coords(13, 0, 13)].subChunks[0, 4, 0].voxels[0, 0, 0].water = -1f;
+        }
+        if (Input.GetKeyDown("m"))
+        {
+            WaterSimulationTest();
+        }
         if (Input.GetMouseButton(0))
         {
             if (toolAdd)
@@ -238,6 +251,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         //Debug.Log(CalculateIsoValue(playerPos));
         if (Time.time - timeAtLastUpdate > updateRate)
         {
+           
             UpdateQueues();
             UpdateChunkMeshes();
             UpdateUnloadChunks();
@@ -288,6 +302,89 @@ public class VoxelEngine : Singleton<VoxelEngine>
     {
         UpdateInfoText();
     }
+    float maxMass = 1.0f;
+    float maxCompress = 0.02f;
+    float minMass = .0001f;
+    
+    void WaterSimulationTest()
+    {
+        var coord = new Coords(13, 0, 13);
+        var chunk = chunks[coord];
+        for (int i = 0; i < subChunkWidth; i++)
+        {
+            for (int j = 0; j < subChunkHeight; j++)
+            {
+                for (int w = 0; w < subChunkDepth; w++)
+                {
+                    for (int x = 0; x < subChunkDepth; x++)
+                    {
+                        for (int y = 0; y < subChunkHeight; y++)
+                        {
+                            for (int z = 0; z < subChunkDepth; z++)
+                            {
+                                float currentMass = -chunk.subChunks[i, j, w].voxels[x, y, z].water;
+
+                                if (currentMass <= 0f)
+                                    continue;
+
+                                int below = y - 1;
+                                int belowSubChunk = j;
+                                if (below < 0)
+                                {
+                                    belowSubChunk--;
+                                    below = subChunkHeight - 1;
+                                }
+                                if (belowSubChunk >= 0)
+                                {
+                                    var belowVoxel = chunk.subChunks[i, belowSubChunk, w].voxels[x, below, z];
+                                    if(belowVoxel.IsoValue >= 0f)
+                                    {
+                                        var belowWater = -belowVoxel.water;
+                                        var passWater = Mathf.Min((Mathf.Max(currentMass + maxCompress, 1.0f) - belowWater), currentMass);
+                                        currentMass -= passWater;
+                                        belowVoxel.newWater += passWater;
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < subChunkWidth; i++)
+        {
+            for (int j = 0; j < subChunkHeight; j++)
+            {
+                for (int w = 0; w < subChunkDepth; w++)
+                {
+                    for (int x = 0; x < subChunkDepth; x++)
+                    {
+                        for (int y = 0; y < subChunkHeight; y++)
+                        {
+                            for (int z = 0; z < subChunkDepth; z++)
+                            {
+                                chunk.subChunks[i, j, w].voxels[x, y, z].water = -chunks[coord].subChunks[i, j, w].voxels[x, y, z].newWater;
+                                chunk.subChunks[i, j, w].voxels[x, y, z].newWater = 0f;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < subChunkWidth; i++)
+        {
+            for (int j = 0; j < subChunkHeight; j++)
+            {
+                for (int w = 0; w < subChunkDepth; w++)
+                {
+                    CalculateVertexDataSubChunk(ref chunk.subChunks[i, j, w], 13, 0, 13);
+                    UpdateSubChunk(ref chunk.subChunks[i, j, w], 13, 0, 13);
+                }
+            }
+        }
+    }
 
     void UpdateModifyQueue()
     {
@@ -325,11 +422,11 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             if (Vector3.Distance(subChunk.voxels[i, j, w].center, hit.point) <= radius)
                             {
-                                subChunk.voxels[i, j, w].isoValue += value;
-                                if (subChunk.voxels[i, j, w].isoValue < -5f)
-                                    subChunk.voxels[i, j, w].isoValue = -5f;
-                                if (subChunk.voxels[i, j, w].isoValue > 5f)
-                                    subChunk.voxels[i, j, w].isoValue = 5f;
+                                subChunk.voxels[i, j, w].IsoValue += value;
+                                if (subChunk.voxels[i, j, w].IsoValue < -5f)
+                                    subChunk.voxels[i, j, w].IsoValue = -5f;
+                                if (subChunk.voxels[i, j, w].IsoValue > 5f)
+                                    subChunk.voxels[i, j, w].IsoValue = 5f;
                             }
                         }
                     }
@@ -646,7 +743,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
             {
                 for (int w = 0; w < subChunkDepth; w++)
                 {
-                    if (subChunk.voxels[i, j, w].isoValue >= 0f)
+                    if (subChunk.voxels[i, j, w].IsoValue >= 0f)
                     {
 
                         var vCoords = new Coords(i, j, w);
@@ -660,7 +757,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             positivX = subChunk.voxels[i + 1, j, w];
                         }
-                        if (positivX != null && positivX.Value.isoValue < 0f)
+                        if (positivX != null && positivX.Value.IsoValue < 0f)
                         {
                             CreateFace(FaceDir.x_positiv, new Vector3(i,j,w), vertices, uvs, triangles);
                         }
@@ -674,7 +771,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             negativX = subChunk.voxels[i - 1, j, w];
                         }
-                        if (negativX != null && negativX.Value.isoValue < 0f)
+                        if (negativX != null && negativX.Value.IsoValue < 0f)
                         {
                             CreateFace(FaceDir.x_negativ, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
@@ -687,7 +784,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             positivY = subChunk.voxels[i, j + 1, w];
                         }
-                        if (positivY != null && positivY.Value.isoValue < 0f)
+                        if (positivY != null && positivY.Value.IsoValue < 0f)
                         {
                             CreateFace(FaceDir.y_positiv, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
@@ -700,7 +797,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             negativY = subChunk.voxels[i, j - 1, w];
                         }
-                        if (negativY != null && negativY.Value.isoValue < 0f)
+                        if (negativY != null && negativY.Value.IsoValue < 0f)
                         {
                             CreateFace(FaceDir.y_negativ, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
@@ -713,7 +810,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             positivZ = subChunk.voxels[i, j, w + 1];
                         }
-                        if (positivZ != null && positivZ.Value.isoValue < 0f)
+                        if (positivZ != null && positivZ.Value.IsoValue < 0f)
                         {
                             CreateFace(FaceDir.z_positiv, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
@@ -726,7 +823,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
                         {
                             negativZ = subChunk.voxels[i, j, w - 1];
                         }
-                        if (negativZ != null && negativZ.Value.isoValue < 0f)
+                        if (negativZ != null && negativZ.Value.IsoValue < 0f)
                         {
                             CreateFace(FaceDir.z_negativ, new Vector3(i, j, w), vertices, uvs, triangles);
                         }
@@ -1013,7 +1110,7 @@ public class VoxelEngine : Singleton<VoxelEngine>
         var chunk = chunks[coords];
         var subChunk = chunk.subChunks[chunkCoords.subX, chunkCoords.subY, chunkCoords.subZ];
 
-        return subChunk.voxels[x, y, z].isoValue;
+        return subChunk.voxels[x, y, z].IsoValue + subChunk.voxels[x, y, z].water;
     }
 
     float GetIsoValue(Vector3 pos)

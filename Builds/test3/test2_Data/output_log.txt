@@ -1,0 +1,50 @@
+Initialize engine version: 5.6.0f3 (497a0f351392)
+GfxDevice: creating device client; threaded=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: NVIDIA GeForce GTX 970M (ID=0x13d8)
+    Vendor:   NVIDIA
+    VRAM:     3040 MB
+    Driver:   22.21.13.8205
+Begin MonoManager ReloadAssembly
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\UnityEngine.dll (this message is harmless)
+Loading D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\Assembly-CSharp-firstpass.dll (this message is harmless)
+Loading D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\Assembly-CSharp-firstpass.dll into Unity Child Domain
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\Assembly-CSharp.dll (this message is harmless)
+Loading D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\UnityEngine.UI.dll (this message is harmless)
+Loading D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
+Loading D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\PluginWrapper.dll (this message is harmless)
+Loading D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\PluginWrapper.dll into Unity Child Domain
+- Completed reload, in  0.017 seconds
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\System.Core.dll (this message is harmless)
+Platform assembly: D:\Programming\LowPolyVoxelEngine\Builds\test3\test2_Data\Managed\System.dll (this message is harmless)
+desktop: 1920x1080 60Hz; virtual: 1920x1080 at 0,0
+<RI> Initializing input.
+<RI> Input initialized.
+<RI> Initialized touch support.
+UnloadTime: 3.891359 ms
+Calculate IsoValue time: 00:00:00.1724433
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Calculate chunkCoords: 00:00:00.0001521
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Setting up 4 worker threads for Enlighten.
+  Thread -> id: dfc -> priority: 1 
+  Thread -> id: 1c14 -> priority: 1 
+  Thread -> id: d8c -> priority: 1 
+  Thread -> id: 25fc -> priority: 1 
+Plugin execution time: 00:00:00.0124370
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+C# execution time: 00:00:00.3138139
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+

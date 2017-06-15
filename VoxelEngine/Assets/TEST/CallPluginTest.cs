@@ -33,31 +33,35 @@ public class CallPluginTest : MonoBehaviour {
         {
             var sw = new diagnostic.Stopwatch();
             sw.Start();
-            for (int j = 0; j < 10; j++)
-            {
-                Expensive();
-            }
-           // var arr = PluginWrapper.PluginWrapper.ArrayFromIntPtr(data, len);
+            //for (int j = 0; j < 10; j++)
+            //{
+            var arr = PluginWrapper.PluginWrapper.GetArrayFromPluging();
+            //}
+            // var arr = PluginWrapper.PluginWrapper.ArrayFromIntPtr(data, len);
             sw.Stop();
             Debug.Log("Plugin execution time: " + sw.Elapsed);
             sw.Reset();
             sw.Start();
-            for (int j = 0; j < 10; j++)
+            //for (int j = 0; j < 10; j++)
+            //{
+            var array = new float[50000];
+            var dict = new Dictionary<int, float>();
+            for (int i = 0; i < 5000000; i++)
             {
-                var array = new float[100000];
-                var dict = new Dictionary<int, float>();
-                for (int i = 0; i < 100000; i++)
+                if (!dict.ContainsKey(i))
                 {
-                    if (!dict.ContainsKey(i))
-                    {
-                        dict.Add(i, (i * 10f) / 0.5f);
-                    }
-                    array[i] = i * i - (i * 10f);
+                    dict.Add(i, i * i - (i * 10.0f));
                 }
             }
+            for (int i = 0; i < 50000; i++)
+            {
+                array[i] = i * i - (i * 10f);
+            }
+            //}
             
             sw.Stop();
             Debug.Log("C# execution time: " + sw.Elapsed);
+            //Debug.Log(arr[5] + " " + array[5]);
         }
 
     }
