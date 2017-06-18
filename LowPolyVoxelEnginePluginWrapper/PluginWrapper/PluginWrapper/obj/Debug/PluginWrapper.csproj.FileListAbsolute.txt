@@ -1,0 +1,5 @@
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\bin\Debug\PluginWrapper.dll
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\bin\Debug\PluginWrapper.pdb
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Debug\PluginWrapper.csprojResolveAssemblyReference.cache
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Debug\PluginWrapper.dll
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Debug\PluginWrapper.pdb

@@ -25,7 +25,7 @@ public class CallPluginTest : MonoBehaviour {
     public static extern void Init(int cw, int ch, int cd, int scw, int sch, int scd, float vSpacing);
     // Use this for initialization
     void Start () {
-        Init(0, 0, 0, 0, 0, 0, 0.0f);
+        
 	}
 	
 	// Update is called once per frame

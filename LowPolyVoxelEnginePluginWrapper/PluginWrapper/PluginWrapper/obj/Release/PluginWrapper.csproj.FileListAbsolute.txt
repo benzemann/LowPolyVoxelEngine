@@ -1,0 +1,12 @@
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\bin\Release\PluginWrapper.dll
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\bin\Release\PluginWrapper.pdb
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Release\PluginWrapper.dll
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Release\PluginWrapper.pdb
+D:\Programming\LowPolyVoxelEngine\VoxelEngine\Assets\Resources\PluginWrapper.dll
+D:\Programming\LowPolyVoxelEngine\VoxelEngine\Assets\Resources\PluginWrapper.pdb
+D:\Programming\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Release\PluginWrapper.csprojResolveAssemblyReference.cache
+D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEngine\VoxelEngine\Assets\Resources\PluginWrapper.dll
+D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEngine\VoxelEngine\Assets\Resources\PluginWrapper.pdb
+D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Release\PluginWrapper.csprojResolveAssemblyReference.cache
+D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Release\PluginWrapper.dll
+D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEnginePluginWrapper\PluginWrapper\PluginWrapper\obj\Release\PluginWrapper.pdb

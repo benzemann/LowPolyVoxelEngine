@@ -89,9 +89,12 @@
   <ItemGroup>
     <Compile Include="Assets\NewBehaviourScript.cs" />
     <Compile Include="Assets\Scripts\FPSCounter.cs" />
+    <Compile Include="Assets\Scripts\FlyCam.cs" />
     <Compile Include="Assets\Scripts\Player.cs" />
+    <Compile Include="Assets\Scripts\PluginApi.cs" />
     <Compile Include="Assets\Scripts\Singleton.cs" />
     <Compile Include="Assets\Scripts\VoxelEngine.cs" />
+    <Compile Include="Assets\Scripts\VoxelEngineOld.cs" />
     <Compile Include="Assets\TEST\CallPluginTest.cs" />
     <Compile Include="Assets\TEST\GradientTest.cs" />
     <Compile Include="Assets\TEST\Noise.cs" />

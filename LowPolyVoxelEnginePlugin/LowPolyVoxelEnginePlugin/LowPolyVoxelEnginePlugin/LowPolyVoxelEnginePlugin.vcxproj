@@ -147,11 +147,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ChunkManager.h" />
     <ClInclude Include="Debug.h" />
     <ClInclude Include="VoxelEngine.h" />
     <ClInclude Include="VoxelEngineAPI.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ChunkManager.cpp" />
     <ClCompile Include="Debug.cpp" />
     <ClCompile Include="VoxelEngine.cpp" />
     <ClCompile Include="VoxelEngineAPI.cpp" />
