@@ -1,0 +1,12 @@
+﻿  VoxelEngineAPI.cpp
+  VoxelEngine.cpp
+d:\programming\lowpolyvoxelengine\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\voxelengine.cpp(131): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+d:\programming\lowpolyvoxelengine\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\voxelengine.cpp(161): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  IVoxelEngine.cpp
+d:\programming\lowpolyvoxelengine\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\ivoxelengine.cpp(3): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+d:\programming\lowpolyvoxelengine\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\lowpolyvoxelengineplugin\ivoxelengine.cpp(17): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+  Debug.cpp
+  Generating Code...
+VoxelEngineAPI.obj : error LNK2005: Init already defined in IVoxelEngine.obj
+     Creating library D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEnginePlugin\LowPolyVoxelEnginePlugin\x64\Debug\LowPolyVoxelEnginePlugin.lib and object D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEnginePlugin\LowPolyVoxelEnginePlugin\x64\Debug\LowPolyVoxelEnginePlugin.exp
+D:\Programming\LowPolyVoxelEngine\LowPolyVoxelEnginePlugin\LowPolyVoxelEnginePlugin\x64\Debug\LowPolyVoxelEnginePlugin.dll : fatal error LNK1169: one or more multiply defined symbols found
